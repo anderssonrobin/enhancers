@@ -24,7 +24,7 @@ STUB=""          # Name of project (prefix to output files)
 OPATH=""         # Path where to put the output files
 FILTER=""        # Bed file with masked regions for negative filtering of bidirectional loci (e.g. known TSSs +/- 500bp and known exons +/- 200 bp)
 TEMP=""          # Temporary directory to use
-DIST=400         # Maximum distance between convergent tag clusters to be considered the same bidirectional loci (default 400)
+DIST=400         # Maximum distance between divergent tag clusters to be considered the same bidirectional loci (default 400)
 WIN=200          # Size of flanking windows around mid points to consider when quantifying the expression of bidirectional transcribed loci (default 200)
 DIR=0.8          # Directionality threshold in (0,1) for filtering enhancers (default 0.8)
 RMTMP=1
@@ -57,7 +57,7 @@ usage() {
 	echoerr "  [-m BED]      bed file with masked regions for negative filtering of bidirectional"
 	echoerr "                loci (e.g. known TSSs +/- 500bp and known exons +/- 200 bp)"
 	echoerr "  [-t PATH]     Temporary directory to use"
-	echoerr "  [-g N]        Maximum gap between convergent tag clusters to be considered"
+	echoerr "  [-g N]        Maximum gap between divergent tag clusters to be considered"
 	echoerr "                the same bidirectional loci (default 400)"
 	echoerr "  [-w N]        Size of flanking windows around mid points to consider when"
 	echoerr "                quantifying the expression of bidirectional transcribed loci"
