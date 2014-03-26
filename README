@@ -1,0 +1,14 @@
+Robin Andersson (2014)
+andersson.robin@gmail.com
+
+Scripts for localization of transcribed enhancers and quntification of their usage from the initiation sites of bidirectionally transcribed loci.
+Used for identifying transcribed enhancers across FANTOM5 samples in Andersson R et al. 2014. An atlas of active enhancers across human cell types and tissues. Nature. doi:10.1038/nature12787
+
+REQUIREMENTS
+bedtools: http://bedtools.readthedocs.org/en/latest/ https://github.com/arq5x/bedtools
+
+USAGE
+The main program is scripts/bidir_enhancers which relies on utility scripts in bin/ (this hierarchy of directories is assumed in bidir_enhancers).
+The required arguments are the path to a file listing paths to bed files with transcription initiation sites (1 bp) and an output path.
+If you want to filter bidirectionally transcribed loci to not be near known TSSs or exons you need to pass the path to a mask file (bed) for filtering.
+Mask file used in Andersson et al. 2014 is available in the mask directory.
