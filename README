@@ -1,14 +1,29 @@
 Robin Andersson (2014)
 andersson.robin@gmail.com
+http://about.me/robin.andersson
 
-Scripts for localization of transcribed enhancers and quntification of their usage from the initiation sites of bidirectionally transcribed loci.
-Used for identifying transcribed enhancers across FANTOM5 samples in Andersson R et al. 2014. An atlas of active enhancers across human cell types and tissues. Nature. doi:10.1038/nature12787
+Scripts for localization of transcribed enhancers and quntification of their usage from the initiation sites of bidirectionally transcribed loci. Used for identifying transcribed enhancers across FANTOM5 samples in Andersson R et al. 2014. An atlas of active enhancers across human cell types and tissues. Nature. doi:10.1038/nature12787
 
 REQUIREMENTS
 bedtools: http://bedtools.readthedocs.org/en/latest/ https://github.com/arq5x/bedtools
 
 USAGE
-The main program is scripts/bidir_enhancers which relies on utility scripts in bin/ (this hierarchy of directories is assumed in bidir_enhancers).
-The required arguments are the path to a file listing paths to bed files with transcription initiation sites (1 bp) and an output path.
-If you want to filter bidirectionally transcribed loci to not be near known TSSs or exons you need to pass the path to a mask file (bed) for filtering.
-Mask file used in Andersson et al. 2014 is available in the mask directory.
+The main program is scripts/bidir_enhancers which relies on utility scripts in bin/ (this hierarchy of directories is assumed in bidir_enhancers). The required arguments are the path to a file listing paths to bed files with transcription initiation sites (1 bp) and an output path. If you want to filter bidirectionally transcribed loci to not be near known TSSs or exons you need to pass the path to a mask file (bed) for filtering. Mask file used in Andersson et al. 2014 is available in the mask directory.
+
+In order to use the scripts, you may need to change the paths to perl and bash executables. These are assumed to be /usr/bin/perl and /bin/bash respectively.
+
+OUTPUT
+The program may be run with a prefix (-s option) that will be added in front of each output files.
+
+bidir_enhancers output
+* a bed12 file with inferred bidirectional transcribed loci: ${PREFIX}bidir.pairs.bed
+* optionally a bed12 file with filtered loci (if a mask file was given): ${PREFIX}bidir.pairs.filtered.bed
+* a bed12 containing bidirectionally transcribed loci (above) with expression characteristics (see below) indicative of being enhancers: ${PREFIX}enhancers.bed
+
+The blocks in the bed12 files indicate (merged) regions of transcription initiation sites. The first block is for minus strand transcription and the second for plus strand transcription. For each of these bed files, two expression matrices are created:
+* one matrix with tag counts
+* one matrix with TPM (tags per million mapped reads) transformed tag counts
+
+The enhancers are predicted based on a transriptional directionality (D) different from unidirectional transcription. The default threshold used is abs(D) < 0.8. The directionality score is calculated from pooled data (over all input libraries). Enhancers are further required to be bidirectionally transcribed in at least one library and to have greater minus strand expression than plus strand expression in the minus strand expression window and vice versa.
+
+For more details and a justification of the method and parameters used please consult Andersson R et al. 2014. An atlas of active enhancers across human cell types and tissues. Nature. doi:10.1038/nature12787
