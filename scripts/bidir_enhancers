@@ -127,6 +127,11 @@ if [ "$TCS" != "" ]; then
 fi
 TCFILE=${TEMP}/${STUB}TCs.bed
 
+## Add slash to output path if needed
+if  [[ ! $OPATH == */ ]]; then
+	OPATH=${OPATH}/
+fi
+
 ## Identify tag clusters, if needed
 ## Note: The Andersson et al. (2014) study used DPI tag clusters described in Forrest A et al. 2014. Nature. (doi:10.1038/nature13182).
 if [ "$TCS" == "" ]; then
