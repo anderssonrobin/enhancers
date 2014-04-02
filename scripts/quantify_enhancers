@@ -1,0 +1,165 @@
+#!/bin/bash
+
+# quantify_enhancers
+#
+# Robin Andersson (2014)
+# andersson.robin@gmail.com
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+FILES=""         # A single file with paths to files with transcription initiation sites (5' bed6 files with score column quantifying the number of mapped reads)
+STUB=""          # Name of project (prefix to output files)
+OPATH=""         # Path where to put the output files
+TEMP=""          # Temporary directory to use
+BPS=""           # bed12 file describing bidirectionally transcribed loci predicted to be enhancers by bidir_enhancers
+WIN=200          # Size of flanking windows around mid points to consider when quantifying the expression of bidirectional transcribed loci (default 200)
+RMTMP=1
+
+echoerr() { echo "$@" 1>&2; }
+
+usage() {
+	echoerr
+	echoerr ${0##/*}
+	echoerr "  Robin Andersson (2014), andersson.robin@gmail.com"
+	echoerr "  Quntification of enhancer usage inferred from the"
+	echoerr "  initiation sites of bidirectionally transcribed loci."
+	echoerr "  Used for quantifying expression of defined enhancers like those in"
+	echoerr "  Andersson R et al. 2014. An atlas of active enhancers across human cell types"
+	echoerr "  and tissues. Nature. doi:10.1038/nature12787"
+	echoerr
+	echoerr "Usage:"
+	echoerr "  ${0##/} OPTIONS -f FILE -o PATH"
+	echoerr
+	echoerr "Required:"
+	echoerr "  [-f PATH]     A single file with paths to files with transcription initiation"
+	echoerr "                sites (5' bed6 files with score column quantifying the number of"
+	echoerr "                mapped reads)"
+	echoerr "  [-e PATH]     bed12 file describing bidirectionally transcribed loci predicted"
+	echoerr "                to be enhancers by bidir_enhancers"
+	echoerr "  [-o PATH]     Path where to put the output files"
+	echoerr
+	echoerr "OPTIONS:"
+	echoerr "  [-s STRING]   Name of project (prefix to output files)"
+	echoerr "  [-t PATH]     Temporary directory to use"
+	echoerr "  [-w N]        Size of flanking windows around mid points to consider when"
+	echoerr "                quantifying the expression of bidirectional transcribed loci"
+	echoerr "                (default 200, should be the same used for bidir_enhancers)"
+	echoerr
+	exit
+}
+
+BINDIR="`dirname \"$0\"`"/../bin
+if [ ! -d $BINDIR ]; then
+	echoerr "cannot locate bin directory (../bin relative the path to this script)"
+	exit
+fi
+
+## show usage if '-h' or  '--help' is the first argument or no argument is given
+case $1 in
+	""|"-h"|"--help") usage ;;
+esac
+
+## Needed scripts in the bin/ directory:
+## sum_matrices.pl
+## tpm_transform.pl
+
+## read the paramters
+while getopts f:e:o:s:t:w: opt; do
+	case ${opt} in
+		f) FILES=${OPTARG};;
+		e) BPS=${OPTARG};;
+		o) OPATH=${OPTARG};;
+		s) STUB=${OPTARG};;
+		t) TEMP=${OPTARG};;
+		w) WIN=${OPTARG};;
+		*) usage;;
+	esac
+done
+
+## check the parameters
+if [ "$FILES" == "" ]; then echoerr "f parameter is required"; usage; fi
+if [ "$FILES" != "" ] && [ ! -e $FILES ]; then echoerr "No such file ${FILES}"; usage; fi
+if [ "$BPS" == "" ]; then echoerr "e parameter is required"; usage; fi
+if [ "$BPS" != "" ] && [ ! -e $BPS ]; then echoerr "No such file ${BPS}"; usage; fi
+if [ "$OPATH" == "" ]; then echoerr "o parameter is required"; usage; fi
+if [ "$OPATH" != "" ] && [ ! -d $OPATH ]; then mkdir $OPATH; fi
+if [ "$TEMP" == "" ]; then TEMP=`mktemp -d`; fi
+if [ "$TEMP" != "" ]; then RMTMP=0; fi
+if [ "$TEMP" != "" ] && [ ! -d $TEMP ]; then mkdir $TEMP; fi
+if [[ ! $WIN =~ ^[0-9]+$ ]]; then echoerr "window size must be an integer"; usage; fi
+
+echoerr "Running \"`basename $0`\" with parameters \"$*\""
+echoerr "Robin Andersson (2014), andersson.robin@gmail.com"
+echoerr "https://github.com/anderssonrobin/enhancers"
+echoerr
+
+## Add slash to output and temp paths if needed
+if  [[ ! $OPATH == */ ]]; then
+	OPATH=${OPATH}/
+fi
+if  [[ ! $TEMP == */ ]]; then
+	TEMP=${TEMP}/
+fi
+
+sort -k 1,1 -k 2,2n -o ${TEMP}${STUB}enhancers.bed $BPS
+BPS=${TEMP}${STUB}enhancers.bed
+
+ESTUB=$( echo $BPS | sed -e "s/\.bed//" )
+ESTUB=`basename $ESTUB`
+
+## Quantify expression
+echoerr "Quantifying expression across files"
+awk -v win=$WIN 'BEGIN{OFS="\t"}{print $1,$7-win,$7,$4,".","-"}' $BPS > ${TEMP}${ESTUB}.left.minus.window.bed
+awk -v win=$WIN 'BEGIN{OFS="\t"}{print $1,$8,$8+win,$4,".","-"}' $BPS > ${TEMP}${ESTUB}.right.minus.window.bed
+awk -v win=$WIN 'BEGIN{OFS="\t"}{print $1,$7-win,$7,$4,".","+"}' $BPS > ${TEMP}${ESTUB}.left.plus.window.bed
+awk -v win=$WIN 'BEGIN{OFS="\t"}{print $1,$8,$8+win,$4,".","+"}' $BPS > ${TEMP}${ESTUB}.right.plus.window.bed
+
+cut -f 4 ${TEMP}${ESTUB}.left.minus.window.bed > ${TEMP}${ESTUB}.expression.left.minus.matrix
+cut -f 4 ${TEMP}${ESTUB}.right.minus.window.bed > ${TEMP}${ESTUB}.expression.right.minus.matrix
+cut -f 4 ${TEMP}${ESTUB}.left.plus.window.bed > ${TEMP}${ESTUB}.expression.left.plus.matrix
+cut -f 4 ${TEMP}${ESTUB}.right.plus.window.bed > ${TEMP}${ESTUB}.expression.right.plus.matrix
+
+LIBRARYCOUNTS=${OPATH}/${STUB}library.counts.txt
+if [ -e $LIBRARYCOUNTS ]; then rm $LIBRARYCOUNTS; fi
+touch $LIBRARYCOUNTS
+
+for FILE in $( cat $FILES ); do
+	CNT=`awk '{SUM += $5} END {print SUM}' $FILE`
+	echo $CNT >> $LIBRARYCOUNTS
+	for SIDE in left right; do
+		for STRAND in plus minus; do
+			bedtools intersect -wao -s -a ${TEMP}${ESTUB}.${SIDE}.${STRAND}.window.bed -b $FILE | sort -k 1,1 -k 2,2n | cut -f 1,2,3,4,5,6,11 | awk 'BEGIN{OFS="\t"} {v = $7; if (v <= 0) v = 0; print $1,$2,$3,$4,$5,$6,v}' | bedtools groupby -g 1,2,3,4,5,6 -c 7 -o sum | sort -k 1,1 -k 2,2n | cut -f 7 > ${TEMP}${ESTUB}.expression.${SIDE}.${STRAND}.tmp &
+		done
+		wait
+		for STRAND in plus minus; do
+			paste ${TEMP}${ESTUB}.expression.${SIDE}.${STRAND}.matrix ${TEMP}${ESTUB}.expression.${SIDE}.${STRAND}.tmp > ${TEMP}${ESTUB}.expression.${SIDE}.${STRAND}.tmp2
+			mv ${TEMP}${ESTUB}.expression.${SIDE}.${STRAND}.tmp2 ${TEMP}${ESTUB}.expression.${SIDE}.${STRAND}.matrix
+		done
+	done
+done
+rm ${TEMP}${ESTUB}.expression.left.plus.tmp
+rm ${TEMP}${ESTUB}.expression.left.minus.tmp
+rm ${TEMP}${ESTUB}.expression.right.plus.tmp
+rm ${TEMP}${ESTUB}.expression.right.minus.tmp
+
+${BINDIR}/sum_matrices.pl ${TEMP}${ESTUB}.expression.left.minus.matrix ${TEMP}${ESTUB}.expression.right.plus.matrix 1 | paste $BPS - | cut -f 4,13- > ${OPATH}${ESTUB}.expression.matrix
+
+## TPM normalize
+echoerr "Normalizing expression to tags per million mapped tags (TPM)"
+${BINDIR}/tpm_transform.pl ${OPATH}${ESTUB}.expression.matrix ${LIBRARYCOUNTS} 1 | paste $BPS - | cut -f 4,13- > ${OPATH}${ESTUB}.expression.tpm.matrix
+	
+sort -k 1,1 -o ${OPATH}${ESTUB}.expression.matrix ${OPATH}${ESTUB}.expression.matrix
+sort -k 1,1 -o ${OPATH}${ESTUB}.expression.tpm.matrix ${OPATH}${ESTUB}.expression.tpm.matrix
+
+if [ $RMTMP -eq 1 ]; then rm -rf $TEMP; fi
