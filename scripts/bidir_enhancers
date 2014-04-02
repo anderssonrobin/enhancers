@@ -127,9 +127,12 @@ if [ "$TCS" != "" ]; then
 fi
 TCFILE=${TEMP}/${STUB}TCs.bed
 
-## Add slash to output path if needed
+## Add slash to output and temp paths if needed
 if  [[ ! $OPATH == */ ]]; then
 	OPATH=${OPATH}/
+fi
+if  [[ ! $TEMP == */ ]]; then
+	TEMP=${TEMP}/
 fi
 
 ## Identify tag clusters, if needed
