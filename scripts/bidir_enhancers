@@ -122,11 +122,6 @@ echoerr "Robin Andersson (2014), andersson.robin@gmail.com"
 echoerr "https://github.com/anderssonrobin/enhancers"
 echoerr
 
-if [ "$TCS" != "" ]; then
-	cut -f -6 $TCS | sort -k 1,1 -k 2,2n > ${TEMP}/${STUB}TCs.bed
-fi
-TCFILE=${TEMP}/${STUB}TCs.bed
-
 ## Add slash to output and temp paths if needed
 if  [[ ! $OPATH == */ ]]; then
 	OPATH=${OPATH}/
@@ -135,38 +130,43 @@ if  [[ ! $TEMP == */ ]]; then
 	TEMP=${TEMP}/
 fi
 
+if [ "$TCS" != "" ]; then
+	cut -f -6 $TCS | sort -k 1,1 -k 2,2n --temporary-directory=${TEMP} > ${TEMP}${STUB}TCs.bed
+fi
+TCFILE=${TEMP}${STUB}TCs.bed
+
 ## Identify tag clusters, if needed
 ## Note: The Andersson et al. (2014) study used DPI tag clusters described in Forrest A et al. 2014. Nature. (doi:10.1038/nature13182).
 if [ "$TCS" == "" ]; then
 	echoerr "Identifying tag clusters"
-	BED=${TEMP}/${STUB}pooled.bed
-	MBED=${TEMP}/${STUB}pooled.merged.bed
+	BED=${TEMP}${STUB}pooled.bed
+	MBED=${TEMP}${STUB}pooled.merged.bed
 	if [ -e $BED ]; then rm $BED; fi
 	touch $BED
 	for FILE in $( cat $FILES ); do cat $FILE >> $BED; done
-	sort -k 1,1 -k 2,2n -k 3,3n -k 6,6 $BED | bedtools groupby -i stdin -g 1,2,3,6 -c 5 -o sum | awk 'BEGIN{OFS="\t"}{print $1, $2, $3, NR, $5, $4}' > $MBED
-	bedtools merge -d 20 -s -i $MBED -scores sum | awk 'BEGIN{OFS="\t"}{if ($4 > 1) {print $1, $2, $3, $1 ":" $2 "-" $3 "," $5, $4, $5}}' | sort -k 1,1 -k 2,2n > ${OPATH}/${STUB}TCs.bed
-	TCFILE=${OPATH}/${STUB}TCs.bed
+	sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n -k 3,3n -k 6,6 $BED | bedtools groupby -i stdin -g 1,2,3,6 -c 5 -o sum | awk 'BEGIN{OFS="\t"}{print $1, $2, $3, NR, $5, $4}' > $MBED
+	bedtools merge -d 20 -s -i $MBED -scores sum | awk 'BEGIN{OFS="\t"}{if ($4 > 1) {print $1, $2, $3, $1 ":" $2 "-" $3 "," $5, $4, $5}}' | sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n > ${OPATH}${STUB}TCs.bed
+	TCFILE=${OPATH}${STUB}TCs.bed
 fi
 
 ## Identify bidirectional transcribed loci
 echoerr "Identifying bidirectionally transcribed loci"
-${BINDIR}/split_strand.pl $TCFILE ${TEMP}/${STUB}TCs.plus.bed ${TEMP}/${STUB}TCs.minus.bed
+${BINDIR}/split_strand.pl $TCFILE ${TEMP}${STUB}TCs.plus.bed ${TEMP}${STUB}TCs.minus.bed
 
-bedtools intersect -v -wa -a ${TEMP}/${STUB}TCs.plus.bed -b ${TEMP}/${STUB}TCs.minus.bed > ${TEMP}/${STUB}TCs.plus.no.minus.bed
-bedtools intersect -v -wa -b ${TEMP}/${STUB}TCs.plus.bed -a ${TEMP}/${STUB}TCs.minus.bed > ${TEMP}/${STUB}TCs.minus.no.plus.bed
-bedtools window -l 0 -r $DIST -a ${TEMP}/${STUB}TCs.minus.no.plus.bed -b ${TEMP}/${STUB}TCs.plus.no.minus.bed | awk 'BEGIN{OFS="\t"}{print $0, $3-$8}' > ${TEMP}/${STUB}TCs.bidir.pairs.bed
-sort -k 1,1 -k 2,2n -o ${TEMP}/${STUB}TCs.bidir.pairs.bed ${TEMP}/${STUB}TCs.bidir.pairs.bed
-${BINDIR}/bed12_merge_pairs_dynamic.pl ${TEMP}/${STUB}TCs.bidir.pairs.bed | awk 'BEGIN{OFS="\t"}{print $1, $2, $3, $1 ":" $2 "-" $3, $5, $6, $7, $8, $9, $10, $11, $12}' > ${OPATH}/${STUB}bidir.pairs.bed
+bedtools intersect -v -wa -a ${TEMP}${STUB}TCs.plus.bed -b ${TEMP}${STUB}TCs.minus.bed > ${TEMP}${STUB}TCs.plus.no.minus.bed
+bedtools intersect -v -wa -b ${TEMP}${STUB}TCs.plus.bed -a ${TEMP}${STUB}TCs.minus.bed > ${TEMP}${STUB}TCs.minus.no.plus.bed
+bedtools window -l 0 -r $DIST -a ${TEMP}${STUB}TCs.minus.no.plus.bed -b ${TEMP}${STUB}TCs.plus.no.minus.bed | awk 'BEGIN{OFS="\t"}{print $0, $3-$8}' > ${TEMP}${STUB}TCs.bidir.pairs.bed
+sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n -o ${TEMP}${STUB}TCs.bidir.pairs.bed ${TEMP}${STUB}TCs.bidir.pairs.bed
+${BINDIR}/bed12_merge_pairs_dynamic.pl ${TEMP}${STUB}TCs.bidir.pairs.bed | awk 'BEGIN{OFS="\t"}{print $1, $2, $3, $1 ":" $2 "-" $3, $5, $6, $7, $8, $9, $10, $11, $12}' > ${OPATH}${STUB}bidir.pairs.bed
 
-BPS=${OPATH}/${STUB}bidir.pairs.bed
+BPS=${OPATH}${STUB}bidir.pairs.bed
 
 ## Filter for known TSSs and exons
 if [ "$FILTER" != "" ]; then
 	echoerr "Filtering masked regions"
-	bedtools intersect -v -wa -a ${OPATH}/${STUB}bidir.pairs.bed -b $FILTER > ${OPATH}/${STUB}bidir.pairs.filtered.bed
-	sort -k 1,1 -k 2,2n -o ${OPATH}/${STUB}bidir.pairs.filtered.bed ${OPATH}/${STUB}bidir.pairs.filtered.bed
-	BPS=${OPATH}/${STUB}bidir.pairs.filtered.bed
+	bedtools intersect -v -wa -a ${OPATH}${STUB}bidir.pairs.bed -b $FILTER > ${OPATH}${STUB}bidir.pairs.filtered.bed
+	sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n -o ${OPATH}${STUB}bidir.pairs.filtered.bed ${OPATH}${STUB}bidir.pairs.filtered.bed
+	BPS=${OPATH}${STUB}bidir.pairs.filtered.bed
 fi
 
 ESTUB=$( echo $BPS | sed -e "s/\.bed//" )
@@ -184,7 +184,7 @@ cut -f 4 ${TEMP}${ESTUB}.right.minus.window.bed > ${TEMP}${ESTUB}.expression.rig
 cut -f 4 ${TEMP}${ESTUB}.left.plus.window.bed > ${TEMP}${ESTUB}.expression.left.plus.matrix
 cut -f 4 ${TEMP}${ESTUB}.right.plus.window.bed > ${TEMP}${ESTUB}.expression.right.plus.matrix
 
-LIBRARYCOUNTS=${OPATH}/${STUB}library.counts.txt
+LIBRARYCOUNTS=${OPATH}${STUB}library.counts.txt
 if [ -e $LIBRARYCOUNTS ]; then rm $LIBRARYCOUNTS; fi
 touch $LIBRARYCOUNTS
 
@@ -193,7 +193,7 @@ for FILE in $( cat $FILES ); do
 	echo $CNT >> $LIBRARYCOUNTS
 	for SIDE in left right; do
 		for STRAND in plus minus; do
-			bedtools intersect -wao -s -a ${TEMP}${ESTUB}.${SIDE}.${STRAND}.window.bed -b $FILE | sort -k 1,1 -k 2,2n | cut -f 1,2,3,4,5,6,11 | awk 'BEGIN{OFS="\t"} {v = $7; if (v <= 0) v = 0; print $1,$2,$3,$4,$5,$6,v}' | bedtools groupby -g 1,2,3,4,5,6 -c 7 -o sum | sort -k 1,1 -k 2,2n | cut -f 7 > ${TEMP}${ESTUB}.expression.${SIDE}.${STRAND}.tmp &
+			bedtools intersect -wao -s -a ${TEMP}${ESTUB}.${SIDE}.${STRAND}.window.bed -b $FILE | sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n | cut -f 1,2,3,4,5,6,11 | awk 'BEGIN{OFS="\t"} {v = $7; if (v <= 0) v = 0; print $1,$2,$3,$4,$5,$6,v}' | bedtools groupby -g 1,2,3,4,5,6 -c 7 -o sum | sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n | cut -f 7 > ${TEMP}${ESTUB}.expression.${SIDE}.${STRAND}.tmp &
 		done
 		wait
 		for STRAND in plus minus; do
@@ -244,12 +244,12 @@ cut -f 2 ${TEMP}${ESTUB}.right.minus.fraction.txt > ${TEMP}${ESTUB}.rm.txt
 cut -f 2 ${OPATH}${ESTUB}.directionality.txt > ${TEMP}${ESTUB}.wdir.txt
 paste $BPS ${TEMP}${ESTUB}.lp.txt ${TEMP}${ESTUB}.rm.txt ${TEMP}${ESTUB}.wdir.txt ${TEMP}${ESTUB}.bidir.transcribed.txt | awk -v dir=$DIR '{if ($13 < 1 && $14 < 1 && $15 < dir && $15 > (-1*dir) && $16 == 1) print $0}' | cut -f -12 > ${OPATH}${STUB}enhancers.bed
 
-sort -k 4,4 -o $BPS $BPS
-sort -k 1,1 -o ${OPATH}${ESTUB}.expression.matrix ${OPATH}${ESTUB}.expression.matrix
-sort -k 1,1 -o ${OPATH}${ESTUB}.expression.tpm.matrix ${OPATH}${ESTUB}.expression.tpm.matrix
-sort -k 1,1 -o ${OPATH}${ESTUB}.directionality.txt ${OPATH}${ESTUB}.directionality.txt
-sort -k 1,1 -o ${OPATH}${ESTUB}.directionality.matrix ${OPATH}${ESTUB}.directionality.matrix
-sort -k 4,4 -o ${OPATH}${STUB}enhancers.bed ${OPATH}${STUB}enhancers.bed
+sort --temporary-directory=${TEMP} -k 4,4 -o $BPS $BPS
+sort --temporary-directory=${TEMP} -k 1,1 -o ${OPATH}${ESTUB}.expression.matrix ${OPATH}${ESTUB}.expression.matrix
+sort --temporary-directory=${TEMP} -k 1,1 -o ${OPATH}${ESTUB}.expression.tpm.matrix ${OPATH}${ESTUB}.expression.tpm.matrix
+sort --temporary-directory=${TEMP} -k 1,1 -o ${OPATH}${ESTUB}.directionality.txt ${OPATH}${ESTUB}.directionality.txt
+sort --temporary-directory=${TEMP} -k 1,1 -o ${OPATH}${ESTUB}.directionality.matrix ${OPATH}${ESTUB}.directionality.matrix
+sort --temporary-directory=${TEMP} -k 4,4 -o ${OPATH}${STUB}enhancers.bed ${OPATH}${STUB}enhancers.bed
 cut -f 4 ${OPATH}${STUB}enhancers.bed | join -1 1 -2 1 - ${OPATH}${ESTUB}.expression.matrix | tr " " "\t" > ${OPATH}${STUB}enhancer.expression.matrix
 cut -f 4 ${OPATH}${STUB}enhancers.bed | join -1 1 -2 1 - ${OPATH}${ESTUB}.expression.tpm.matrix | tr " " "\t" > ${OPATH}${STUB}enhancer.expression.tpm.matrix
 
