@@ -157,7 +157,8 @@ bedtools intersect -v -wa -a ${TEMP}${STUB}TCs.plus.bed -b ${TEMP}${STUB}TCs.min
 bedtools intersect -v -wa -b ${TEMP}${STUB}TCs.plus.bed -a ${TEMP}${STUB}TCs.minus.bed > ${TEMP}${STUB}TCs.minus.no.plus.bed
 bedtools window -l 0 -r $DIST -a ${TEMP}${STUB}TCs.minus.no.plus.bed -b ${TEMP}${STUB}TCs.plus.no.minus.bed | awk 'BEGIN{OFS="\t"}{print $0, $3-$8}' > ${TEMP}${STUB}TCs.bidir.pairs.bed
 sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n -o ${TEMP}${STUB}TCs.bidir.pairs.bed ${TEMP}${STUB}TCs.bidir.pairs.bed
-${BINDIR}/bed12_merge_pairs_dynamic.pl ${TEMP}${STUB}TCs.bidir.pairs.bed | awk 'BEGIN{OFS="\t"}{print $1, $2, $3, $1 ":" $2 "-" $3, $5, $6, $7, $8, $9, $10, $11, $12}' > ${OPATH}${STUB}bidir.pairs.bed
+## Merge pairs and discard bidirectional transcribed loci too close to chromosome starts
+${BINDIR}/bed12_merge_pairs_dynamic.pl ${TEMP}${STUB}TCs.bidir.pairs.bed | awk -v win=$WIN 'BEGIN{OFS="\t"}{if (($7-win) >= 0) {print $1, $2, $3, $1 ":" $2 "-" $3, $5, $6, $7, $8, $9, $10, $11, $12}}' > ${OPATH}${STUB}bidir.pairs.bed
 
 BPS=${OPATH}${STUB}bidir.pairs.bed
 
