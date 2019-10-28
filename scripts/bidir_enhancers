@@ -132,6 +132,9 @@ fi
 
 if [ "$TCS" != "" ]; then
 	cut -f -6 $TCS | sort -k 1,1 -k 2,2n --temporary-directory=${TEMP} > ${TEMP}${STUB}TCs.bed
+    echoerr "Identifying bidirectionally transcribed loci"
+    TCFILE=${TEMP}${STUB}TCs.bed
+    ${BINDIR}/split_strand.pl $TCFILE ${TEMP}${STUB}TCs.plus.bed ${TEMP}${STUB}TCs.minus.bed
 fi
 
 ## Identify tag clusters, if needed
@@ -157,8 +160,9 @@ if [ "$TCS" == "" ]; then
 fi
 
 ## Identify bidirectional transcribed loci
-echoerr "Identifying bidirectionally transcribed loci"
-#${BINDIR}/split_strand.pl $TCFILE ${TEMP}${STUB}TCs.plus.bed ${TEMP}${STUB}TCs.minus.bed
+#echoerr "Identifying bidirectionally transcribed loci"
+#    ${BINDIR}/split_strand.pl $TCFILE ${TEMP}${STUB}TCs.plus.bed ${TEMP}${STUB}TCs.minus.bed
+
 
 bedtools intersect -v -wa -a ${TEMP}${STUB}TCs.plus.bed -b ${TEMP}${STUB}TCs.minus.bed > ${TEMP}${STUB}TCs.plus.no.minus.bed
 bedtools intersect -v -wa -b ${TEMP}${STUB}TCs.plus.bed -a ${TEMP}${STUB}TCs.minus.bed > ${TEMP}${STUB}TCs.minus.no.plus.bed
