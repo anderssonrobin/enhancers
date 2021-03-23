@@ -40,7 +40,7 @@ usage() {
 	echoerr "  Used for identifying transcribed enhancers across FANTOM5 samples in"
 	echoerr "  Andersson R et al. 2014. An atlas of active enhancers across human cell types"
 	echoerr "  and tissues. Nature. doi:10.1038/nature12787"
-	echoerr
+	echoerr "  Modified by Masaki Suimye Morioka (update:2021.3) for adapting recent bedtools versions (v.2.92.0 and 2.30.0)"
 	echoerr "Usage:"
 	echoerr "  ${0##/} OPTIONS -f FILE -o PATH"
 	echoerr
