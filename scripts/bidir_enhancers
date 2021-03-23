@@ -151,10 +151,10 @@ if [ "$TCS" == "" ]; then
 		| awk 'BEGIN{OFS="\t"}{print $1, $2, $3, NR, $5, $4}' > $MBED
 
 	bedtools merge -d 20 -S + -i $MBED -o sum -c 5\
-		| awk 'BEGIN{OFS="\t"}{if ($4 > 1) {print $1, $2, $3, $1 ":" $2 "-" $3 ",+" $5, $4,"+"}}' \
+		| awk 'BEGIN{OFS="\t"}{if ($4 > 1) {print $1, $2, $3, $1 ":" $2 "-" $3 ",+", $4,"+"}}' \
 		| sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n > ${TEMP}${STUB}TCs.plus.bed
 	bedtools merge -d 20 -S - -i $MBED -o sum -c 5\
-		| awk 'BEGIN{OFS="\t"}{if ($4 > 1) {print $1, $2, $3, $1 ":" $2 "-" $3 ",-" $5, $4,"+"}}' \
+		| awk 'BEGIN{OFS="\t"}{if ($4 > 1) {print $1, $2, $3, $1 ":" $2 "-" $3 ",-", $4,"-"}}' \
 		| sort --temporary-directory=${TEMP} -k 1,1 -k 2,2n > ${TEMP}${STUB}TCs.minus.bed
 
 fi
